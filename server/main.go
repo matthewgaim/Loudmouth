@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
+	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,10 +17,14 @@ import (
 )
 
 // (Testing variables)
-var title = "Trailer Park Boys"
-var episode = "3"
-var username = "CoolioSchmoolio"
-var message = "Did ricky just say that!?"
+var coll *mongo.Collection
+
+func setupRoutes() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Simple Server")
+	})
+	http.HandleFunc("/ws", serveWs)
+}
 
 func main() {
 	// Get Secrets
@@ -43,27 +49,26 @@ func main() {
 			panic(err)
 		}
 	}()
-	coll := client.Database("netflix").Collection("movies")
+	coll = client.Database("netflix").Collection("movies")
 
-	// (Testing) Show & Add Comments
-	commentData := showComments(coll, title, episode)
-	if commentData != nil {
-		comments, err := json.MarshalIndent(commentData, "", "    ")
-		if err != nil {
-			panic(err)
-		} else {
-			fmt.Printf("%s \n", comments)
-		}
-	}
+	// (Testing) Show Comments
+	// commentData := showComments(coll, title, episode)
+	// if commentData != nil {
+	// 	comments, err := json.MarshalIndent(commentData, "", "    ")
+	// 	if err != nil {
+	// 		panic(err)
+	// 	} else {
+	// 		fmt.Printf("%s \n", comments)
+	// 	}
+	// }
 
-	err = addComment(coll, username, message, title, episode)
-	if err != nil {
-		fmt.Print(err)
-	}
+	setupRoutes()
+	http.ListenAndServe(":8080", nil)
 }
 
 func addComment(coll *mongo.Collection, author string, comment string, title string, episode string) error {
 	if coll == nil {
+		fmt.Println("Coll is nil")
 		return nil
 	}
 	opts := options.FindOneAndUpdate().SetUpsert(true)
@@ -97,4 +102,65 @@ func showComments(coll *mongo.Collection, title string, episode string) bson.M {
 		panic(err)
 	}
 	return result
+}
+
+// We'll need to define an Upgrader
+// this will require a Read and Write buffer size
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+
+	// We'll need to check the origin of our connection
+	// this will allow us to make requests from our React
+	// development server to here.
+	// For now, we'll do no checking and just allow any connection
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+type Message struct {
+	author  string `json:"author"`
+	comment string `json:"comment"`
+	title   string `json:"title"`
+	episode string `json:"episode"`
+}
+
+func reader(conn *websocket.Conn) {
+	for {
+		_, p, err := conn.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		// print out that message for clarity
+		// fmt.Println(string(p))
+
+		var jsonMap map[string]interface{}
+		json.Unmarshal(p, &jsonMap)
+		author := fmt.Sprintf("%v", jsonMap["author"])
+		comment := fmt.Sprintf("%v", jsonMap["comment"])
+		title := fmt.Sprintf("%v", jsonMap["title"])
+		episode := fmt.Sprintf("%v", jsonMap["episode"])
+		fmt.Println(author, comment, title, episode)
+		err = addComment(coll, author, comment, title, episode)
+		if err != nil {
+			fmt.Print(err)
+		} else {
+			log.Println("Created comment")
+		}
+	}
+}
+
+// define our WebSocket endpoint
+func serveWs(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.Host)
+
+	// upgrade this connection to a WebSocket
+	// connection
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+	}
+	// listen indefinitely for new messages coming
+	// through on our WebSocket connection
+	reader(ws)
 }

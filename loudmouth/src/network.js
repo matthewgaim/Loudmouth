@@ -1,14 +1,15 @@
 var socket = new WebSocket("ws://localhost:8080/ws");
 
-let connect = () => {
-  console.log("Attempting Connection...");
+let connect = cb => {
+  console.log("connecting");
 
   socket.onopen = () => {
     console.log("Successfully Connected");
   };
 
   socket.onmessage = msg => {
-    console.log(msg);
+    console.log(msg.data);
+    cb(JSON.parse(msg.data));
   };
 
   socket.onclose = event => {

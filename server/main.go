@@ -117,35 +117,32 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-type Message struct {
-	author  string `json:"author"`
-	comment string `json:"comment"`
-	title   string `json:"title"`
-	episode string `json:"episode"`
-}
-
 func reader(conn *websocket.Conn) {
 	for {
-		_, p, err := conn.ReadMessage()
+		messageType, p, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		// print out that message for clarity
-		// fmt.Println(string(p))
+		defer func() {
+			var jsonMap map[string]interface{}
+			json.Unmarshal(p, &jsonMap)
+			author := fmt.Sprintf("%v", jsonMap["author"])
+			comment := fmt.Sprintf("%v", jsonMap["comment"])
+			title := fmt.Sprintf("%v", jsonMap["title"])
+			episode := fmt.Sprintf("%v", jsonMap["episode"])
+			fmt.Println(author, comment, title, episode)
+			err = addComment(coll, author, comment, title, episode)
+			if err != nil {
+				fmt.Print(err)
+			} else {
+				log.Println("Created comment")
+			}
+		}()
 
-		var jsonMap map[string]interface{}
-		json.Unmarshal(p, &jsonMap)
-		author := fmt.Sprintf("%v", jsonMap["author"])
-		comment := fmt.Sprintf("%v", jsonMap["comment"])
-		title := fmt.Sprintf("%v", jsonMap["title"])
-		episode := fmt.Sprintf("%v", jsonMap["episode"])
-		fmt.Println(author, comment, title, episode)
-		err = addComment(coll, author, comment, title, episode)
-		if err != nil {
-			fmt.Print(err)
-		} else {
-			log.Println("Created comment")
+		if err := conn.WriteMessage(messageType, p); err != nil {
+			log.Println(err)
+			return
 		}
 	}
 }

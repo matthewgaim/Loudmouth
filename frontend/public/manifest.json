@@ -1,0 +1,27 @@
+{
+  "name": "Loudmouth",
+  "description": "Live comments for streaming services such as Netflix",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Start yappin!"
+  },
+  "icons": {
+    "16": "logo192.png",
+    "48": "logo192.png",
+    "128": "logo192.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+   },
+  "permissions": [
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": ["https://*/*"],
+  "content_scripts": [{
+    "matches": ["*://*.netflix.com/*"],
+    "js": ["content.js"]
+  }]
+}

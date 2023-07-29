@@ -84,7 +84,6 @@ func getComments(svc *dynamodb.DynamoDB, w http.ResponseWriter, r *http.Request)
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			} else {
 				items := GetDBItem(response.VideoID, svc, response.Time)
-				fmt.Println(items)
 				w.Header().Set("Access-Control-Allow-Origin", "*")
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(items)

@@ -58,7 +58,7 @@ function App() {
       <header className="App-header">
         <div className="comments">
           <ul className="divide-y divide-gray-100">
-            {comments.length ? 
+            {comments && comments.length ?
               comments.map((post: any) => {
               return (
                 <li id={post.uuid} className="flex justify-between gap-x-6 py-5">

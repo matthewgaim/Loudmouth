@@ -20,7 +20,7 @@ func AddDBItem(tableName string, item Item, svc *dynamodb.DynamoDB) {
 	av, err := dynamodbattribute.MarshalMap(item)
 	input := &dynamodb.PutItemInput{
 		Item:      av,
-		TableName: aws.String(tableName),
+		TableName: aws.String("81153184"),
 	}
 	_, err = svc.PutItem(input)
 	if err != nil {

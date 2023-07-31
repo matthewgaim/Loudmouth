@@ -56,14 +56,7 @@ func addcomment(sess *session.Session, svc *dynamodb.DynamoDB, w http.ResponseWr
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			createmydbtable(item.VideoID, sess, svc)
-			err = svc.WaitUntilTableExists(&dynamodb.DescribeTableInput{TableName: aws.String(item.VideoID)})
-			if err != nil {
-				fmt.Printf("Got error waiting for table %s to exist:\n", item.VideoID)
-				fmt.Println(err.Error())
-			} else {
-				AddDBItem(item.VideoID, item, svc)
-			}
+			AddDBItem(item.VideoID, item, svc)
 		}
 	}
 }
@@ -91,40 +84,6 @@ func getComments(svc *dynamodb.DynamoDB, w http.ResponseWriter, r *http.Request)
 		}
 	default:
 		w.WriteHeader(http.StatusForbidden)
-	}
-}
-
-func createmydbtable(tableName string, sess *session.Session, svc *dynamodb.DynamoDB) {
-	input := &dynamodb.CreateTableInput{
-		AttributeDefinitions: []*dynamodb.AttributeDefinition{
-			{
-				AttributeName: aws.String("uuid"),
-				AttributeType: aws.String("S"),
-			},
-			{
-				AttributeName: aws.String("time"),
-				AttributeType: aws.String("N"),
-			},
-		},
-		KeySchema: []*dynamodb.KeySchemaElement{
-			{
-				AttributeName: aws.String("uuid"),
-				KeyType:       aws.String("HASH"),
-			},
-			{
-				AttributeName: aws.String("time"),
-				KeyType:       aws.String("RANGE"),
-			},
-		},
-		ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(1),
-			WriteCapacityUnits: aws.Int64(1),
-		},
-		TableName: aws.String(tableName),
-	}
-	_, err := svc.CreateTable(input)
-	if err != nil {
-		fmt.Printf("Got error calling CreateTable for table '%s': %s\n", tableName, err.Error())
 	}
 }
 

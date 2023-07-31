@@ -15,9 +15,13 @@ type GetCommentsResponse struct {
 }
 
 func GetDBItem(tableName string, svc *dynamodb.DynamoDB, time int) []Item {
-	filt := expression.Name("time").GreaterThanEqual(expression.Value(time))
+	TimeFilter := expression.Name("time").GreaterThanEqual(expression.Value(time))
+	VideoIDFilter := expression.Name("videoid").Equal(expression.Value(tableName))
 	proj := expression.NamesList(expression.Name("uuid"), expression.Name("time"), expression.Name("comment"), expression.Name("videoid"))
-	expr, err := expression.NewBuilder().WithFilter(filt).WithProjection(proj).Build()
+	expr, err := expression.NewBuilder().
+		WithFilter(TimeFilter.And(VideoIDFilter)).
+		WithProjection(proj).
+		Build()
 	if err != nil {
 		log.Fatalf("Got error building expression: %s", err)
 	}
@@ -26,7 +30,7 @@ func GetDBItem(tableName string, svc *dynamodb.DynamoDB, time int) []Item {
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
 		ProjectionExpression:      expr.Projection(),
-		TableName:                 aws.String(tableName),
+		TableName:                 aws.String("81153184"),
 	}
 	result, err := svc.Scan(params)
 	if err != nil {
